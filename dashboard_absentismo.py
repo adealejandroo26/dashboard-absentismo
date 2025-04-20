@@ -88,8 +88,8 @@ if uploaded_file:
         resumen_total['Absentismo (%)'] = (resumen_total['Horas de ausencia'] / resumen_total['Horas teóricas']) * 100
         resumen_total['Absentismo (%)'] = resumen_total['Absentismo (%)'].round(2)
 
-        st.subheader("📊 Gráfico de Absentismo por Mes y Geografía")
-        fig = px.bar(
+        st.subheader("📊 Gráfico de Absentismo por Mes y Geografía (Barras)")
+        fig_bar = px.bar(
             resumen_total,
             x='Mes_nombre',
             y='Absentismo (%)',
@@ -99,8 +99,31 @@ if uploaded_file:
             labels={'Mes_nombre': 'Mes'},
             title='Absentismo mensual (%) por geografía'
         )
-        fig.update_traces(textposition='outside')
-        st.plotly_chart(fig, use_container_width=True)
+        fig_bar.update_traces(textposition='outside')
+        st.plotly_chart(fig_bar, use_container_width=True)
+
+        # Gráfico de líneas con línea de referencia
+        st.subheader("📈 Comparativa con índice objetivo")
+        umbral = st.number_input("Introduce el índice de absentismo esperado (%)", min_value=0.0, max_value=100.0, value=4.0, step=0.1)
+        resumen_total['Índice objetivo (%)'] = umbral
+
+        fig_line = px.line(
+            resumen_total,
+            x='Mes_nombre',
+            y='Absentismo (%)',
+            color='Geografía',
+            labels={'Mes_nombre': 'Mes'},
+            title='Absentismo vs. Índice objetivo'
+        )
+        for geo in resumen_total['Geografía'].unique():
+            fig_line.add_scatter(
+                x=resumen_total[resumen_total['Geografía'] == geo]['Mes_nombre'],
+                y=[umbral] * len(resumen_total[resumen_total['Geografía'] == geo]),
+                mode='lines',
+                name=f'Objetivo {geo}',
+                line=dict(dash='dash', color='gray')
+            )
+        st.plotly_chart(fig_line, use_container_width=True)
 
         st.subheader("📋 Detalle de cálculos")
         st.dataframe(resumen_total[['Geografía', 'Mes_nombre', 'Horas de ausencia', 'Horas teóricas', 'Absentismo (%)']])
@@ -122,4 +145,3 @@ if uploaded_file:
                 file_name="resumen_absentismo.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )
-
