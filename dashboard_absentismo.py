@@ -15,7 +15,7 @@ if uploaded_file:
     df['Fin'] = pd.to_datetime(df['Fin'])
 
     def calcular_horas_ausencia_por_dia(row, jornadas_por_geo):
-        dias = (row['Fin'].date() - row['Inicio'].date()).days
+        dias = (row['Fin'].date() - row['Inicio'].date()).days + 1
         geo = row['Geografía']
         horas_mes = jornadas_por_geo.get(geo, 140)
         horas_dia = horas_mes / 28
@@ -78,8 +78,6 @@ if uploaded_file:
 
         for nombre_rango, inicio, fin in rangos:
             df_rango = df_filtrado[(df_filtrado['Inicio'] >= inicio) & (df_filtrado['Inicio'] <= fin)].copy()
-            jornadas_por_geo = {g: configuracion[g]['jornada_mensual'] for g in geografias_seleccionadas}
-            df_rango['Horas de ausencia'] = df_rango.apply(lambda row: calcular_horas_ausencia_por_dia(row, jornadas_por_geo), axis=1)
             resumen_total = pd.DataFrame()
 
             for geo in geografias_seleccionadas:
@@ -131,6 +129,7 @@ if uploaded_file:
 
         st.subheader("📋 Datos consolidados de todos los rangos")
         df_final = pd.concat(resumen_completo, ignore_index=True)
+        df_final['Horas por día'] = df_final['Horas de ausencia'] / df_final['Horas de ausencia'].apply(lambda h: h / (h / (h if h > 0 else 1)))
         st.dataframe(df_final[['Rango', 'Geografía', 'Mes_nombre', 'Horas de ausencia', 'Horas teóricas', 'Absentismo (%)']])
 
         if st.button("📥 Exportar a Excel"):
@@ -144,3 +143,4 @@ if uploaded_file:
                 file_name="comparativo_absentismo_rangos.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )
+
