@@ -51,7 +51,7 @@ if uploaded_file:
             nombre = st.text_input(f"Nombre para el rango #{i+1}", f"Rango {i+1}", key=f"nombre_rango_{i}")
         with col2:
             fechas = st.date_input(f"Fechas para {nombre}", value=[datetime(2023, 1, 1), datetime(2023, 3, 31)], key=f"fecha_rango_{i}")
-        if isinstance(fechas, (list, tuple)) and len(feches) == 2:
+        if isinstance(fechas, (list, tuple)) and len(fechas) == 2:
             rangos.append((nombre, pd.to_datetime(fechas[0]), pd.to_datetime(fechas[1])))
 
     umbral = st.number_input("Índice de absentismo objetivo (%)", min_value=0.0, max_value=100.0, value=4.0, step=0.1)
@@ -133,4 +133,3 @@ if uploaded_file:
                 file_name="absentismo_dinamico.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )
-
