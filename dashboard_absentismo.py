@@ -74,6 +74,7 @@ if uploaded_file:
                 resumen = df_geo.groupby('Mes')['Horas de ausencia'].sum().reset_index()
                 resumen['Geografía'] = geo
                 resumen['Rango'] = nombre_rango
+                resumen['Etiqueta'] = nombre_rango + ' - ' + geo
                 resumen['Horas teóricas'] = resumen['Mes'].apply(
                     lambda m: configuracion[geo]['empleados_mes'][m] * configuracion[geo]['jornada_mensual']
                 )
@@ -81,6 +82,7 @@ if uploaded_file:
 
         resumen_final['Mes_nombre'] = resumen_final['Mes'].apply(lambda m: datetime(2023, m, 1).strftime('%b'))
         resumen_final['Absentismo (%)'] = (resumen_final['Horas de ausencia'] / resumen_final['Horas teóricas']) * 100
+        resumen_final['Etiqueta'] = resumen_final['Rango'] + ' - ' + resumen_final['Geografía']
         resumen_final['Absentismo (%)'] = resumen_final['Absentismo (%)'].round(2)
 
         st.subheader("📊 Gráfico comparativo de barras por Rango")
@@ -88,9 +90,9 @@ if uploaded_file:
             resumen_final,
             x='Mes_nombre',
             y='Absentismo (%)',
-            color='Rango',
+            color='Etiqueta',
             barmode='group',
-            
+            facet_col='Geografía',
             title='Absentismo por Mes, Geografía y Rango'
         )
         fig_bar.update_traces(texttemplate='%{y}%', textposition='outside')
@@ -101,9 +103,9 @@ if uploaded_file:
             resumen_final,
             x='Mes_nombre',
             y='Absentismo (%)',
-            color='Rango',
+            color='Etiqueta',
             line_group='Rango',
-            
+            facet_col='Geografía',
             title='Absentismo vs Índice Objetivo por Rango'
         )
         for geo in resumen_final['Geografía'].unique():
