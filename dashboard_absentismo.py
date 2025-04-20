@@ -66,6 +66,8 @@ if uploaded_file:
 
     if rangos:
         jornadas_por_geo = {g: configuracion[g]['jornada_mensual'] for g in geografias_seleccionadas}
+        # Volver a calcular tras configurar jornadas
+        jornadas_por_geo = {g: configuracion[g]['jornada_mensual'] for g in geografias_seleccionadas}
         df['Horas de ausencia'] = df.apply(lambda row: calcular_horas_ausencia_por_dia(row, jornadas_por_geo), axis=1)
 
         df_filtrado = df[
@@ -142,6 +144,7 @@ if uploaded_file:
                 file_name="comparativo_absentismo_rangos.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )
+
 
 
 
