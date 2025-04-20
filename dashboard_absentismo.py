@@ -15,7 +15,8 @@ if config_file:
     config = {}
     for k, v in raw_config.items():
         geo, ano = k.split("__")
-        config[(geo, int(ano))] = v
+        empleados = {int(m): n for m, n in v["empleados"].items()}
+        config[(geo, int(ano))] = {"jornada": v["jornada"], "empleados": empleados}
 else:
     saved_config = {}
     config = {}
@@ -165,3 +166,4 @@ if uploaded_file:
                 file_name="absentismo_multianual.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )
+
