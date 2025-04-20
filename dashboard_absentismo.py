@@ -1,4 +1,3 @@
-
 import streamlit as st
 import pandas as pd
 from datetime import datetime
@@ -29,6 +28,9 @@ if uploaded_file:
     codigos_disponibles = sorted(df['Codigo'].dropna().unique())
     codigos_seleccionados = st.multiselect("Selecciona códigos de ausencia a incluir:", codigos_disponibles, default=codigos_disponibles)
 
+    funciones_disponibles = sorted(df['Función'].dropna().unique())
+    funciones_seleccionadas = st.multiselect("Selecciona función(es):", funciones_disponibles, default=funciones_disponibles)
+
     configuracion = {}
 
     st.sidebar.header("⚙️ Configuración por geografía")
@@ -48,7 +50,8 @@ if uploaded_file:
     df_filtrado = df[
         (df['Geografía'].isin(geografias_seleccionadas)) &
         (df['Año'] == anio_seleccionado) &
-        (df['Codigo'].isin(codigos_seleccionados))
+        (df['Codigo'].isin(codigos_seleccionados)) &
+        (df['Función'].isin(funciones_seleccionadas))
     ]
 
     st.subheader("📆 Selecciona el rango de fechas para el análisis")
