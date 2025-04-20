@@ -13,7 +13,21 @@ if uploaded_file:
     df = pd.read_excel(uploaded_file)
     df['Inicio'] = pd.to_datetime(df['Inicio'])
     df['Fin'] = pd.to_datetime(df['Fin'])
-    df['Horas de ausencia'] = (df['Fin'] - df['Inicio']).dt.total_seconds() / 3600
+    
+# Calcular duración por horas si hay hora exacta, si no, estimar por días y jornada mensual
+def calcular_horas_ausencia(row, jornadas_por_geo):
+    if row['Inicio'].hour == 0 and row['Fin'].hour == 0:
+        dias = (row['Fin'] - row['Inicio']).days
+        geo = row['Geografía']
+        horas_mes = jornadas_por_geo.get(geo, 140)
+        horas_dia = horas_mes / 28
+        return dias * horas_dia
+    else:
+        return (row['Fin'] - row['Inicio']).total_seconds() / 3600
+
+# Temporario: se actualiza después de configuración
+df['Horas de ausencia'] = 0
+
     df['Año'] = df['Inicio'].dt.year
     df['Mes'] = df['Inicio'].dt.month
     df['Mes_nombre'] = df['Inicio'].dt.strftime('%b')
@@ -132,7 +146,4 @@ if uploaded_file:
                 file_name="comparativo_absentismo_rangos.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )
-
-
-
 
