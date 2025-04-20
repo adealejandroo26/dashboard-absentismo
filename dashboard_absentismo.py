@@ -88,7 +88,7 @@ if uploaded_file:
                 barmode='group'
             )
             fig_bar.update_traces(textposition='outside')
-            st.plotly_chart(fig_bar, use_container_width=True)
+            st.plotly_chart(fig_bar, use_container_width=True, key=f'bar_{nombre_rango}')
 
             st.subheader(f"📈 {nombre_rango} - Líneas")
             fig_line = px.line(
@@ -106,7 +106,7 @@ if uploaded_file:
                     name=f'Objetivo {geo}',
                     line=dict(dash='dash', color='gray')
                 )
-            st.plotly_chart(fig_line, use_container_width=True)
+            st.plotly_chart(fig_line, use_container_width=True, key=f'line_{nombre_rango}')
 
         st.subheader("📋 Datos consolidados")
         st.dataframe(final)
