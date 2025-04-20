@@ -54,17 +54,24 @@ if uploaded_file:
         (df['Función'].isin(funciones_seleccionadas))
     ]
 
-    st.subheader("📆 Selecciona el rango de fechas para el análisis")
+    st.subheader("📆 Selecciona uno o más rangos de fechas para el análisis")
+    rango_count = st.number_input("¿Cuántos rangos quieres analizar?", min_value=1, max_value=10, value=1, step=1)
+
+    rangos = []
     fecha_min = df_filtrado['Inicio'].min()
     fecha_max = df_filtrado['Fin'].max()
-    rango = st.date_input("Rango de fechas", [fecha_min, fecha_max], min_value=fecha_min, max_value=fecha_max)
 
-    if len(rango) == 2:
-        inicio_rango, fin_rango = rango
-        df_periodo = df_filtrado[
-            (df_filtrado['Inicio'] >= pd.to_datetime(inicio_rango)) &
-            (df_filtrado['Inicio'] <= pd.to_datetime(fin_rango))
-        ]
+    for i in range(rango_count):
+        rango = st.date_input(f"Rango #{i+1}", [fecha_min, fecha_max], key=f"rango_{i}")
+        if len(rango) == 2:
+            rangos.append(rango)
+
+    if rangos:
+        df_periodo = pd.DataFrame()
+        for r in rangos:
+            inicio_rango, fin_rango = pd.to_datetime(r[0]), pd.to_datetime(r[1])
+            df_rango = df_filtrado[(df_filtrado['Inicio'] >= inicio_rango) & (df_filtrado['Inicio'] <= fin_rango)]
+            df_periodo = pd.concat([df_periodo, df_rango], ignore_index=True)
 
         resumen_total = pd.DataFrame()
 
@@ -79,6 +86,7 @@ if uploaded_file:
 
         resumen_total['Mes_nombre'] = resumen_total['Mes'].apply(lambda m: datetime(2023, m, 1).strftime('%B'))
         resumen_total['Absentismo (%)'] = (resumen_total['Horas de ausencia'] / resumen_total['Horas teóricas']) * 100
+        resumen_total['Absentismo (%)'] = resumen_total['Absentismo (%)'].round(2)
 
         st.subheader("📊 Gráfico de Absentismo por Mes y Geografía")
         fig = px.bar(
@@ -87,10 +95,11 @@ if uploaded_file:
             y='Absentismo (%)',
             color='Geografía',
             barmode='group',
-            text='Absentismo (%)',
+            text=resumen_total['Absentismo (%)'].astype(str) + '%',
             labels={'Mes_nombre': 'Mes'},
             title='Absentismo mensual (%) por geografía'
         )
+        fig.update_traces(textposition='outside')
         st.plotly_chart(fig, use_container_width=True)
 
         st.subheader("📋 Detalle de cálculos")
@@ -100,7 +109,7 @@ if uploaded_file:
         total_horas_teoricas = resumen_total['Horas teóricas'].sum()
         absentismo_total = (total_horas_ausencia / total_horas_teoricas) * 100 if total_horas_teoricas > 0 else 0
 
-        st.metric("📈 Absentismo total en el periodo seleccionado", f"{absentismo_total:.2f}%")
+        st.metric("📈 Absentismo total en los periodos seleccionados", f"{absentismo_total:.2f}%")
 
         if st.button("📥 Exportar datos a Excel"):
             export_df = resumen_total[['Geografía', 'Mes_nombre', 'Horas de ausencia', 'Horas teóricas', 'Absentismo (%)']]
