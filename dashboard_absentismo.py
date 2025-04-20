@@ -5,7 +5,7 @@ import plotly.express as px
 from io import BytesIO
 
 st.set_page_config(page_title="Dashboard Comparativo", layout="wide")
-st.title("📊 Comparativo de Absentismo entre Rango de Fechas")
+st.title("📊 Comparativo de Absentismo por Rango")
 
 uploaded_file = st.file_uploader("Sube el archivo Excel con los datos de ausencias", type=["xlsx"])
 
@@ -42,8 +42,8 @@ if uploaded_file:
             "empleados_mes": empleados_por_mes
         }
 
-    st.subheader("📆 Añade y nombra los rangos comparativos")
-    num_rangos = st.number_input("¿Cuántos rangos deseas comparar?", min_value=1, max_value=10, value=2, step=1)
+    st.subheader("📆 Define los rangos a comparar")
+    num_rangos = st.number_input("¿Cuántos rangos quieres comparar?", min_value=1, max_value=10, value=2, step=1)
     rangos = []
 
     for i in range(num_rangos):
@@ -58,82 +58,81 @@ if uploaded_file:
     umbral = st.number_input("Índice de absentismo objetivo (%)", min_value=0.0, max_value=100.0, value=4.0, step=0.1)
 
     if rangos:
-        df = df[
+        df_filtrado = df[
             (df['Geografía'].isin(geografias_seleccionadas)) &
             (df['Codigo'].isin(codigos_seleccionados)) &
             (df['Función'].isin(funciones_seleccionadas))
         ]
 
-        resumen_final = pd.DataFrame()
+        resumen_completo = []
 
         for nombre_rango, inicio, fin in rangos:
-            df_rango = df[(df['Inicio'] >= inicio) & (df['Inicio'] <= fin)].copy()
-            df_rango['Rango'] = nombre_rango
+            df_rango = df_filtrado[(df_filtrado['Inicio'] >= inicio) & (df_filtrado['Inicio'] <= fin)].copy()
+            resumen_total = pd.DataFrame()
+
             for geo in geografias_seleccionadas:
                 df_geo = df_rango[df_rango['Geografía'] == geo]
                 resumen = df_geo.groupby('Mes')['Horas de ausencia'].sum().reset_index()
                 resumen['Geografía'] = geo
-                resumen['Rango'] = nombre_rango
-                resumen['Etiqueta'] = nombre_rango + ' - ' + geo
+                resumen['Mes_nombre'] = resumen['Mes'].apply(lambda m: datetime(2023, m, 1).strftime('%b'))
                 resumen['Horas teóricas'] = resumen['Mes'].apply(
-                    lambda m: configuracion[geo]['empleados_mes'][m] * configuracion[geo]['jornada_mensual']
+                    lambda m: configuracion[geo]["empleados_mes"].get(m, 0) * configuracion[geo]["jornada_mensual"]
                 )
-                resumen_final = pd.concat([resumen_final, resumen], ignore_index=True)
+                resumen_total = pd.concat([resumen_total, resumen], ignore_index=True)
 
-        resumen_final['Mes_nombre'] = resumen_final['Mes'].apply(lambda m: datetime(2023, m, 1).strftime('%b'))
-        resumen_final['Absentismo (%)'] = (resumen_final['Horas de ausencia'] / resumen_final['Horas teóricas']) * 100
-        resumen_final['Etiqueta'] = resumen_final['Rango'] + ' - ' + resumen_final['Geografía']
-        resumen_final['Absentismo (%)'] = resumen_final['Absentismo (%)'].round(2)
+            resumen_total['Absentismo (%)'] = (resumen_total['Horas de ausencia'] / resumen_total['Horas teóricas']) * 100
+            resumen_total['Absentismo (%)'] = resumen_total['Absentismo (%)'].round(2)
+            resumen_total['Rango'] = nombre_rango
 
-        st.subheader("📊 Gráfico comparativo de barras por Rango")
-        fig_bar = px.bar(
-            resumen_final,
-            x='Mes_nombre',
-            y='Absentismo (%)',
-            color='Etiqueta',
-            barmode='group',
-            facet_col='Geografía',
-            title='Absentismo por Mes, Geografía y Rango'
-        )
-        fig_bar.update_traces(texttemplate='%{y}%', textposition='outside')
-        st.plotly_chart(fig_bar, use_container_width=True)
+            resumen_completo.append(resumen_total)
 
-        st.subheader("📈 Comparación con Índice Objetivo")
-        fig_line = px.line(
-            resumen_final,
-            x='Mes_nombre',
-            y='Absentismo (%)',
-            color='Etiqueta',
-            line_group='Rango',
-            facet_col='Geografía',
-            title='Absentismo vs Índice Objetivo por Rango'
-        )
-        for geo in resumen_final['Geografía'].unique():
-            fig_line.add_scatter(
-                x=resumen_final['Mes_nombre'].unique(),
-                y=[umbral] * 12,
-                mode='lines',
-                name=f'Objetivo {geo}',
-                line=dict(dash='dash', color='gray'),
-                row=1,
-                col=1
+            st.subheader(f"📊 {nombre_rango}: Gráfico de Barras")
+            fig_bar = px.bar(
+                resumen_total,
+                x='Mes_nombre',
+                y='Absentismo (%)',
+                color='Geografía',
+                barmode='group',
+                text=resumen_total['Absentismo (%)'].astype(str) + '%',
+                title=f"Absentismo por Mes y Geografía - {nombre_rango}"
             )
-        st.plotly_chart(fig_line, use_container_width=True)
+            fig_bar.update_traces(textposition='outside')
+            st.plotly_chart(fig_bar, use_container_width=True)
 
-        st.subheader("📋 Detalle de datos comparativos")
-        st.dataframe(resumen_final[['Rango', 'Geografía', 'Mes_nombre', 'Horas de ausencia', 'Horas teóricas', 'Absentismo (%)']])
+            st.subheader(f"📈 {nombre_rango}: Gráfico de Líneas con Objetivo")
+            fig_line = px.line(
+                resumen_total,
+                x='Mes_nombre',
+                y='Absentismo (%)',
+                color='Geografía',
+                title=f"Absentismo vs. Objetivo - {nombre_rango}"
+            )
+            for geo in resumen_total['Geografía'].unique():
+                fig_line.add_scatter(
+                    x=resumen_total[resumen_total['Geografía'] == geo]['Mes_nombre'],
+                    y=[umbral] * len(resumen_total[resumen_total['Geografía'] == geo]),
+                    mode='lines',
+                    name=f'Objetivo {geo}',
+                    line=dict(dash='dash', color='gray')
+                )
+            st.plotly_chart(fig_line, use_container_width=True)
 
-        if st.button("📥 Exportar comparativo a Excel"):
-            export_df = resumen_final[['Rango', 'Geografía', 'Mes_nombre', 'Horas de ausencia', 'Horas teóricas', 'Absentismo (%)']]
+        st.subheader("📋 Datos consolidados de todos los rangos")
+        df_final = pd.concat(resumen_completo, ignore_index=True)
+        st.dataframe(df_final[['Rango', 'Geografía', 'Mes_nombre', 'Horas de ausencia', 'Horas teóricas', 'Absentismo (%)']])
+
+        if st.button("📥 Exportar a Excel"):
+            export_df = df_final[['Rango', 'Geografía', 'Mes_nombre', 'Horas de ausencia', 'Horas teóricas', 'Absentismo (%)']]
             buffer = BytesIO()
             with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
                 export_df.to_excel(writer, index=False, sheet_name='Comparativo')
             st.download_button(
-                label="📂 Descargar comparativo Excel",
+                label="📂 Descargar archivo Excel",
                 data=buffer.getvalue(),
-                file_name="comparativo_absentismo.xlsx",
+                file_name="comparativo_absentismo_rangos.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )
+
 
 
 
