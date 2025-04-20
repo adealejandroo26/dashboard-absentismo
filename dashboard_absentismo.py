@@ -13,20 +13,16 @@ if uploaded_file:
     df = pd.read_excel(uploaded_file)
     df['Inicio'] = pd.to_datetime(df['Inicio'])
     df['Fin'] = pd.to_datetime(df['Fin'])
-    
-# Calcular duración por horas si hay hora exacta, si no, estimar por días y jornada mensual
-def calcular_horas_ausencia(row, jornadas_por_geo):
-    if row['Inicio'].hour == 0 and row['Fin'].hour == 0:
-        dias = (row['Fin'] - row['Inicio']).days
-        geo = row['Geografía']
-        horas_mes = jornadas_por_geo.get(geo, 140)
-        horas_dia = horas_mes / 28
-        return dias * horas_dia
-    else:
-        return (row['Fin'] - row['Inicio']).total_seconds() / 3600
 
-# Temporario: se actualiza después de configuración
-df['Horas de ausencia'] = 0
+    def calcular_horas_ausencia(row, jornadas_por_geo):
+        if row['Inicio'].hour == 0 and row['Fin'].hour == 0:
+            dias = (row['Fin'] - row['Inicio']).days
+            geo = row['Geografía']
+            horas_mes = jornadas_por_geo.get(geo, 140)
+            horas_dia = horas_mes / 28
+            return dias * horas_dia
+        else:
+            return (row['Fin'] - row['Inicio']).total_seconds() / 3600
 
     df['Año'] = df['Inicio'].dt.year
     df['Mes'] = df['Inicio'].dt.month
@@ -72,6 +68,9 @@ df['Horas de ausencia'] = 0
     umbral = st.number_input("Índice de absentismo objetivo (%)", min_value=0.0, max_value=100.0, value=4.0, step=0.1)
 
     if rangos:
+        jornadas_por_geo = {g: configuracion[g]['jornada_mensual'] for g in geografias_seleccionadas}
+        df['Horas de ausencia'] = df.apply(lambda row: calcular_horas_ausencia(row, jornadas_por_geo), axis=1)
+
         df_filtrado = df[
             (df['Geografía'].isin(geografias_seleccionadas)) &
             (df['Codigo'].isin(codigos_seleccionados)) &
@@ -146,4 +145,5 @@ df['Horas de ausencia'] = 0
                 file_name="comparativo_absentismo_rangos.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )
+
 
