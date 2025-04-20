@@ -90,7 +90,7 @@ if uploaded_file:
             y='Absentismo (%)',
             color='Rango',
             barmode='group',
-            facet_col='Geografía',
+            
             title='Absentismo por Mes, Geografía y Rango'
         )
         fig_bar.update_traces(texttemplate='%{y}%', textposition='outside')
@@ -103,7 +103,7 @@ if uploaded_file:
             y='Absentismo (%)',
             color='Rango',
             line_group='Rango',
-            facet_col='Geografía',
+            
             title='Absentismo vs Índice Objetivo por Rango'
         )
         for geo in resumen_final['Geografía'].unique():
@@ -132,5 +132,6 @@ if uploaded_file:
                 file_name="comparativo_absentismo.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )
+
 
 
