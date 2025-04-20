@@ -4,8 +4,8 @@ from datetime import datetime
 import plotly.express as px
 from io import BytesIO
 
-st.set_page_config(page_title="Dashboard Comparativo", layout="wide")
-st.title("📊 Comparativo de Absentismo por Rango (Lógica Simplificada)")
+st.set_page_config(page_title="Dashboard Absentismo Dinámico", layout="wide")
+st.title("📊 Dashboard de Absentismo (Dinámico y Simplificado)")
 
 uploaded_file = st.file_uploader("Sube el archivo Excel con los datos de ausencias", type=["xlsx"])
 
@@ -26,19 +26,20 @@ if uploaded_file:
     funciones_seleccionadas = st.multiselect("Selecciona función(es):", funciones_disponibles, default=funciones_disponibles)
 
     st.sidebar.header("⚙️ Configuración por geografía")
-    configuracion = {}
+    jornadas = {}
+    empleados = {}
+
     for geo in geografias_seleccionadas:
         st.sidebar.subheader(f"🌍 {geo}")
-        jornada_fija = st.sidebar.number_input(f"Jornada mensual para {geo} (h)", min_value=0, value=140, step=1, key=f"jornada_{geo}")
+        jornada_mensual = st.sidebar.number_input(f"Jornada mensual {geo} (h)", min_value=1, value=140, step=1, key=f"jornada_{geo}")
+        jornadas[geo] = jornada_mensual
         empleados_por_mes = {}
         for mes in range(1, 13):
             nombre_mes = datetime(2023, mes, 1).strftime('%B')
-            empleados = st.sidebar.number_input(f"{geo} - {nombre_mes} - Empleados", min_value=0, value=100, step=1, key=f"{geo}_{mes}")
-            empleados_por_mes[mes] = empleados
-        configuracion[geo] = {
-            "jornada_mensual": jornada_fija,
-            "empleados_mes": empleados_por_mes
-        }
+            empleados_por_mes[mes] = st.sidebar.number_input(
+                f"{geo} - {nombre_mes} - Empleados", min_value=0, value=100, step=1, key=f"{geo}_{mes}"
+            )
+        empleados[geo] = empleados_por_mes
 
     st.subheader("📆 Define los rangos a comparar")
     num_rangos = st.number_input("¿Cuántos rangos deseas comparar?", min_value=1, max_value=10, value=2, step=1)
@@ -50,7 +51,7 @@ if uploaded_file:
             nombre = st.text_input(f"Nombre para el rango #{i+1}", f"Rango {i+1}", key=f"nombre_rango_{i}")
         with col2:
             fechas = st.date_input(f"Fechas para {nombre}", value=[datetime(2023, 1, 1), datetime(2023, 3, 31)], key=f"fecha_rango_{i}")
-        if isinstance(fechas, (list, tuple)) and len(fechas) == 2:
+        if isinstance(fechas, (list, tuple)) and len(feches) == 2:
             rangos.append((nombre, pd.to_datetime(fechas[0]), pd.to_datetime(fechas[1])))
 
     umbral = st.number_input("Índice de absentismo objetivo (%)", min_value=0.0, max_value=100.0, value=4.0, step=0.1)
@@ -73,14 +74,15 @@ if uploaded_file:
                 resumen = df_geo.groupby('Mes').size().reset_index(name='Bajas')
                 resumen['Geografía'] = geo
                 resumen['Mes_nombre'] = resumen['Mes'].apply(lambda m: datetime(2023, m, 1).strftime('%b'))
-                resumen['Horas por baja'] = configuracion[geo]['jornada_mensual'] / 28
+
+                resumen['Jornada mensual'] = jornadas[geo]
+                resumen['Horas por baja'] = resumen['Jornada mensual'] / 28
                 resumen['Horas de ausencia'] = resumen['Bajas'] * resumen['Horas por baja']
-                resumen['Horas teóricas'] = resumen['Mes'].apply(
-                    lambda m: configuracion[geo]['empleados_mes'].get(m, 0) * configuracion[geo]['jornada_mensual']
-                )
+                resumen['Horas teóricas'] = resumen['Mes'].apply(lambda m: empleados[geo][m] * jornadas[geo])
                 resumen['Absentismo (%)'] = (resumen['Horas de ausencia'] / resumen['Horas teóricas']) * 100
                 resumen['Absentismo (%)'] = resumen['Absentismo (%)'].round(2)
                 resumen['Rango'] = nombre_rango
+
                 resumen_total = pd.concat([resumen_total, resumen], ignore_index=True)
 
             resumen_completo.append(resumen_total)
@@ -128,7 +130,7 @@ if uploaded_file:
             st.download_button(
                 label="📂 Descargar comparativo Excel",
                 data=buffer.getvalue(),
-                file_name="comparativo_absentismo_simplificado.xlsx",
+                file_name="absentismo_dinamico.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )
 
