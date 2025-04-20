@@ -66,8 +66,6 @@ if uploaded_file:
 
     if rangos:
         jornadas_por_geo = {g: configuracion[g]['jornada_mensual'] for g in geografias_seleccionadas}
-        # Volver a calcular tras configurar jornadas
-        jornadas_por_geo = {g: configuracion[g]['jornada_mensual'] for g in geografias_seleccionadas}
         df['Horas de ausencia'] = df.apply(lambda row: calcular_horas_ausencia_por_dia(row, jornadas_por_geo), axis=1)
 
         df_filtrado = df[
@@ -80,6 +78,8 @@ if uploaded_file:
 
         for nombre_rango, inicio, fin in rangos:
             df_rango = df_filtrado[(df_filtrado['Inicio'] >= inicio) & (df_filtrado['Inicio'] <= fin)].copy()
+            jornadas_por_geo = {g: configuracion[g]['jornada_mensual'] for g in geografias_seleccionadas}
+            df_rango['Horas de ausencia'] = df_rango.apply(lambda row: calcular_horas_ausencia_por_dia(row, jornadas_por_geo), axis=1)
             resumen_total = pd.DataFrame()
 
             for geo in geografias_seleccionadas:
@@ -144,7 +144,3 @@ if uploaded_file:
                 file_name="comparativo_absentismo_rangos.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )
-
-
-
-
