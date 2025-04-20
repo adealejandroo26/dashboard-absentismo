@@ -5,7 +5,7 @@ import plotly.express as px
 from io import BytesIO
 
 st.set_page_config(page_title="Dashboard Absentismo Dinámico", layout="wide")
-st.title("📊 Dashboard de Absentismo (Dinámico y Simplificado)")
+st.title("📊 Dashboard de Absentismo (Corrección Total)")
 
 uploaded_file = st.file_uploader("Sube el archivo Excel con los datos de ausencias", type=["xlsx"])
 
@@ -26,20 +26,18 @@ if uploaded_file:
     funciones_seleccionadas = st.multiselect("Selecciona función(es):", funciones_disponibles, default=funciones_disponibles)
 
     st.sidebar.header("⚙️ Configuración por geografía")
-    jornadas = {}
-    empleados = {}
 
+    config_ui = {}
     for geo in geografias_seleccionadas:
         st.sidebar.subheader(f"🌍 {geo}")
-        jornada_mensual = st.sidebar.number_input(f"Jornada mensual {geo} (h)", min_value=1, value=140, step=1, key=f"jornada_{geo}")
-        jornadas[geo] = jornada_mensual
-        empleados_por_mes = {}
+        jornada_input = st.sidebar.number_input(f"Jornada mensual {geo} (h)", min_value=1, value=140, step=1, key=f"jornada_{geo}")
+        empleados_mes = {}
         for mes in range(1, 13):
             nombre_mes = datetime(2023, mes, 1).strftime('%B')
-            empleados_por_mes[mes] = st.sidebar.number_input(
+            empleados_mes[mes] = st.sidebar.number_input(
                 f"{geo} - {nombre_mes} - Empleados", min_value=0, value=100, step=1, key=f"{geo}_{mes}"
             )
-        empleados[geo] = empleados_por_mes
+        config_ui[geo] = {"jornada": jornada_input, "empleados": empleados_mes}
 
     st.subheader("📆 Define los rangos a comparar")
     num_rangos = st.number_input("¿Cuántos rangos deseas comparar?", min_value=1, max_value=10, value=2, step=1)
@@ -75,10 +73,9 @@ if uploaded_file:
                 resumen['Geografía'] = geo
                 resumen['Mes_nombre'] = resumen['Mes'].apply(lambda m: datetime(2023, m, 1).strftime('%b'))
 
-                resumen['Jornada mensual'] = jornadas[geo]
-                resumen['Horas por baja'] = resumen['Jornada mensual'] / 28
+                resumen['Horas por baja'] = resumen['Mes'].apply(lambda m: config_ui[geo]['jornada'] / 28)
                 resumen['Horas de ausencia'] = resumen['Bajas'] * resumen['Horas por baja']
-                resumen['Horas teóricas'] = resumen['Mes'].apply(lambda m: empleados[geo][m] * jornadas[geo])
+                resumen['Horas teóricas'] = resumen['Mes'].apply(lambda m: config_ui[geo]['empleados'][m] * config_ui[geo]['jornada'])
                 resumen['Absentismo (%)'] = (resumen['Horas de ausencia'] / resumen['Horas teóricas']) * 100
                 resumen['Absentismo (%)'] = resumen['Absentismo (%)'].round(2)
                 resumen['Rango'] = nombre_rango
@@ -130,6 +127,7 @@ if uploaded_file:
             st.download_button(
                 label="📂 Descargar comparativo Excel",
                 data=buffer.getvalue(),
-                file_name="absentismo_dinamico.xlsx",
+                file_name="absentismo_actualizable.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )
+
