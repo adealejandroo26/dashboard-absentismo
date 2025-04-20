@@ -77,7 +77,7 @@ if uploaded_file:
 
         total_horas_ausencia = resumen['Horas de ausencia'].sum()
         total_horas_teoricas = resumen['Horas teóricas'].sum()
-        absentismo_total = (total_horas_ausencia / total_horas_teoricas) * 100 if total_horas_teóricas > 0 else 0
+        absentismo_total = (total_horas_ausencia / total_horas_teoricas) * 100 if total_horas_teoricas > 0 else 0
 
         st.metric("📈 Absentismo total en el periodo seleccionado", f"{absentismo_total:.2f}%")
 
